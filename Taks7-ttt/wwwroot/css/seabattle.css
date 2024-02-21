@@ -1,0 +1,40 @@
+﻿.block {
+    padding: 20px;
+}
+
+.field {
+    width: 242px;
+    margin: 24px;
+    border: 1px solid #bbdefb;
+}
+
+    .field::before, .field::after {
+        content: '';
+        display: table;
+        clear: both;
+    }
+
+    .field > div {
+        display: inline-block;
+        float: left;
+        height: 24px;
+        width: 24px;
+        border: 1px solid #bbdefb;
+        background-color: #e3f2fd;
+    }
+
+#field-comp .ship {
+    background-color: #e3f2fd;
+}
+
+.field .ship {
+    background-color: #81c784;
+}
+
+.field .broken, #field-comp .broken {
+    background-color: #ff6d00;
+}
+
+.field .missed {
+    background-color: #bbdefb;
+}

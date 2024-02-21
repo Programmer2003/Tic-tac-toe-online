@@ -6,9 +6,10 @@
     <link href="~/css/css.css" rel="stylesheet" />
     <link href="~/css/letter.css" rel="stylesheet" />
     <link href="~/css/ttt.css" rel="stylesheet" />
+    <link href="~/css/seabattle.css" rel="stylesheet" />
 }
 
-<div class="row" id="choice">
+<div class="row" id="choice" style=" display: none">
     <div class="storages">
         <div class="storage game-choice" data-group="1">
             <div class="storage__img">
@@ -49,32 +50,32 @@
     </div> *@
 </div>
 
-<div id="ttt" class="game" style="clear:both">
-    <fieldset>
-        <span id="game-status">Game on</span>
-
-        <div id="divGameBoard" style="width: 315px">
-            <span class="marker notAvailable mark--o" id="0" data-type="0">1</span>
-            <span class="marker mark--x" id="1"></span>
-            <span class="marker" id="2"></span>
-            <span class="marker" id="3"></span>
-            <span class="marker" id="4"></span>
-            <span class="marker" id="5"></span>
-            <span class="marker" id="6"></span>
-            <span class="marker" id="7"></span>
-            <span class="marker" id="8"></span>
+<div id="ttt" class="game" style="clear:both; display: none">
+    <span id="game-status">Game on</span>
+    <div id="divGameBoard" style="width: 315px">
+    </div>
+    <div id="divGameFields" style="display: flex">
+        <div class="block">
+            <div id="field-comp" class="field"></div>
         </div>
-    </fieldset>
+        <div class="block">
+            <div id="field-user" class="field"></div>
+        </div>
+    </div>
+    <button class="btn btn-primary btn-lg mt-5" onclick="location.reload()">Leave</button>
 </div>
 
-<div id="waiting" style="clear:both">
+<div id="waiting" style="clear:both;  display: none">
     <div class="d-flex align-items-center">
-        <strong>Waiting for opponent...</strong>
+        <div>
+            <strong>Waiting for opponent...</strong><br />
+            <strong>Players on site <span id="user-count">0</span></strong>
+        </div>
         <div class="spinner-border ms-auto text-info" style="width: 3rem; height: 3rem;" role="status" aria-hidden="true"></div>
     </div>
 </div>
 
-<div class="letter-image" id="info">
+<div class="letter-image" id="info" style="display: none">
     <div class="animated-mail">
         <div class="back-fold"></div>
         <div class="letter">
@@ -94,6 +95,7 @@
 </div>
 
 @section Scripts{
+    <script src="~/js/battleship.js"></script>
     <script>
         let habUrl = '/game';
         var hubConnection = new signalR.HubConnectionBuilder().withUrl(habUrl).build();
@@ -115,17 +117,6 @@
 
         start();
 
-        hubConnection.on('opponentFound', (data, image) => {
-            games.hide();
-            choice.hide();
-            waiting.hide();
-            game.show();
-            $("#divGameBoard").empty();
-            for (var i = 0; i < 9; i++) {
-                $("#divGameBoard").append("<span class='marker' id=" + i + ">" + i + "</span>");
-            }
-        });
-
         hubConnection.on('getGamesList', data => {
             showGames(data);
         });
@@ -135,6 +126,29 @@
             choice.hide();
             game.hide();
             waiting.show();
+        });
+
+        hubConnection.on('usersCount', data => {
+            $('#user-count').html(data);
+        });
+
+        hubConnection.on('opponentFound', (type, data) => {
+            console.log(type);
+            console.log(data);
+            games.hide();
+            choice.hide();
+            waiting.hide();
+            game.show();
+            switch (type) {
+                case 0:
+                    ShowTTTGameBoard();
+                    break;
+                case 1:
+                    ShowBattleShipFields(data.field1, data.field2);
+                    break;
+                default:
+                    alert("Нет таких значений");
+            }
         });
 
         hubConnection.on('changeGameStatus', data => {
@@ -147,9 +161,32 @@
         });
 
         hubConnection.on('moveMade', data => {
+            console.log(data);
             $("#" + data.position).addClass("notAvailable");
             $("#" + data.position).addClass(data.type);
         });
+
+        function ShowTTTGameBoard() {
+            console.log("check");
+            console.log($("#divGameFields"));
+            $("#divGameFields").hide();
+            $("#divGameBoard").show();
+            for (var i = 0; i < 9; i++) {
+                $("#divGameBoard").append("<span class='marker' data-id=" + i + " id='ttt-tile-" + i + "'></span>");
+            }
+        }
+
+        function ShowBattleShipFields(field1, field2) {
+            console.log("check2");
+            console.log($("#divGameFields"));
+            $("#divGameBoard").hide();
+            $("#divGameFields").show();
+            var gameu = new Field(field1, 'user')
+            gameu.render();
+
+            var gamec = new Field(field2, 'comp')
+            gamec.render();
+        }
     </script>
 
     <script>
@@ -159,14 +196,10 @@
         var choice = $("#choice");
         var info = $("#info");
         var message = $("#message");
-        info.on('click',function(){
+        info.on('click', function () {
             $(this).fadeOut();
         })
 
-        game.hide();
-        info.hide();
-        choice.hide();
-        waiting.hide();
         games.show();
 
         function showGames(data) {
@@ -189,14 +222,12 @@
             hubConnection.invoke('AddGame', name, type);
         })
 
-        $(document).on('click', '.marker', function () {
+        $(document).on('click', '.marker, #field-comp div', function () {
             if ($(this).hasClass("notAvailable")) {
                 return;
             }
 
-            console.log('MakeAMove')
-            console.log(typeof $(this)[0].id)
-            hubConnection.invoke("MakeAMove", $(this)[0].id);
+            hubConnection.invoke("MakeAMove", $(this).data('id'));
         });
 
         $(document).on('click', '.join-game', function () {

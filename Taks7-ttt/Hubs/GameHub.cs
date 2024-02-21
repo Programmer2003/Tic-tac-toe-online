@@ -11,15 +11,21 @@ namespace Taks7_ttt.Hubs
     public class GameHub : Hub
     {
         static ConcurrentBag<Game> games = new ConcurrentBag<Game>() { };
+        static int players_count = 0;
         private static readonly Random toss = new Random();
 
         public override Task OnConnectedAsync()
         {
+            players_count++;
+            UpdateUserCount();
             return base.OnConnectedAsync();
         }
 
         public override Task OnDisconnectedAsync(Exception? exception)
         {
+            players_count--;
+            UpdateUserCount();
+
             var game = games.FirstOrDefault(g => g.Player1.ConnectionId == Context.ConnectionId || g.Player2.ConnectionId == Context.ConnectionId);
             if (game == null) return base.OnDisconnectedAsync(exception);
 
@@ -29,7 +35,7 @@ namespace Taks7_ttt.Hubs
             {
                 return OnOpponentDisconnected(leaver.Opponent.ConnectionId, leaver.Name);
             }
-
+            
             return base.OnDisconnectedAsync(exception);
         }
 
@@ -38,10 +44,8 @@ namespace Taks7_ttt.Hubs
             return Clients.Client(connectionId).SendAsync(Constants.Info, "Opponent disconnected");
         }
 
-        public void MakeAMove(string Position)
+        public void MakeAMove(int position)
         {
-            if (!int.TryParse(Position, out var position)) return;
-
             var game = games.FirstOrDefault(x => x.Player1.ConnectionId == Context.ConnectionId || x.Player2.ConnectionId == Context.ConnectionId);
             if (game == null || game.IsOver) return;
 
@@ -49,10 +53,10 @@ namespace Taks7_ttt.Hubs
             var player = move == 0 ? game.Player1 : game.Player2;
             if (player.WaitingForMove) return;
 
-            var name = player.Name;
-            var type = move == 0 ? "mark--x" : "mark--o";
-            Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.MoveMade, new { position, type});
-            Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.MoveMade, new { position, type });
+            bool forFirstPlayer = move == 0;
+
+            Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.MoveMade, game.GetMovementData(position, move, forFirstPlayer));
+            Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.MoveMade, game.GetMovementData(position, move, !forFirstPlayer));
 
             if (game.Play(move, position))
             {
@@ -67,8 +71,8 @@ namespace Taks7_ttt.Hubs
                     Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.Info, "You win");
                 }
 
-                Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.GameStatus, "Game over");
                 Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.GameStatus, "Game over");
+                Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.GameStatus, "Game over");
                 Remove(game);
                 return;
             }
@@ -78,12 +82,16 @@ namespace Taks7_ttt.Hubs
                 Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.Info, "It's a draw");
                 Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.Info, "It's a draw");
 
+                Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.GameStatus, "Game over");
+                Clients.Client(game.Player2.ConnectionId).SendAsync(Constants.GameStatus, "Game over");
                 Remove(game);
                 return;
             }
 
             if (!game.IsOver)
             {
+                if (!game.MustChangeTurn(position, move == 0)) return;
+
                 player.WaitingForMove = !player.WaitingForMove;
                 player.Opponent.WaitingForMove = !player.Opponent.WaitingForMove;
 
@@ -104,7 +112,7 @@ namespace Taks7_ttt.Hubs
         public void GetGames()
         {
             var list = games.Where(g => g.Player1 != null && !g.IsOver)
-                            .Select(g => new { g.Id, author = g.FirstPlayerName(), name = g.GetName()});
+                            .Select(g => new { g.Id, author = g.FirstPlayerName(), name = g.GetName() });
             Clients.Client(Context.ConnectionId).SendAsync(Constants.GetGames, list);
         }
 
@@ -159,9 +167,9 @@ namespace Taks7_ttt.Hubs
                 game.Player2 = new Player(Context.ConnectionId, name);
                 game.Player1.Opponent = game.Player2;
                 game.Player2.Opponent = game.Player1;
-                
-                Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.OpponentFound);
-                Clients.Client(Context.ConnectionId).SendAsync(Constants.OpponentFound);
+
+                Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(true));
+                Clients.Client(Context.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(false));
 
                 if (toss.Next(0, 1) == 0)
                 {
@@ -186,6 +194,11 @@ namespace Taks7_ttt.Hubs
         {
             games = new ConcurrentBag<Game>(games.Except(new[] { game }));
             UpdateGames();
+        }
+
+        public void UpdateUserCount()
+        {
+            Clients.All.SendAsync(Constants.UpdateUsersCount, players_count - 1);
         }
     }
 }

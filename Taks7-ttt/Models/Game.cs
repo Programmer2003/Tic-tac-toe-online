@@ -26,9 +26,15 @@
             return string.IsNullOrWhiteSpace(Player2.Name) ? "No name" : Player2.Name;
         }
 
+        public virtual object? OnStartData(bool forFirstPlayer) { return null; }
+        public virtual bool MustChangeTurn(int position, bool firstPlayer) { return true; }
+
+        abstract public int Number();
         abstract public string GetName();
         abstract protected bool CheckWinner();
         abstract public bool Play(int move, int position);
+
+        abstract public object GetMovementData(int position, int move, bool forFirstPlayer = true);
 
     }
 }

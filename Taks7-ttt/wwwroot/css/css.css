@@ -132,8 +132,7 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-user-select: none;
      -moz-user-select: none;
       -ms-user-select: none;
-          user-select: none;
-  width: object-fit; }
+          user-select: none; }
 
 .table-all {
   font-size: 20px; }

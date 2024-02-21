@@ -27,8 +27,6 @@ app.UseAuthorization();
 
 app.UseEndpoints(endpoints =>
 {
-    endpoints.MapHub<SeaBattleHub>("/sea-battle");
-    endpoints.MapHub<TicTacToeHub>("/tic-tac-toe");
     endpoints.MapHub<GameHub>("/game");
 });
 

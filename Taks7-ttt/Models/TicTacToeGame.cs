@@ -1,4 +1,6 @@
-﻿namespace Taks7_ttt.Models
+﻿using System.Numerics;
+
+namespace Taks7_ttt.Models
 {
     public class TicTacToeGame : Game
     {
@@ -10,17 +12,6 @@
             {
                 field[i] = -1;
             }
-        }
-
-        public override bool Play(int player, int position)
-        {
-            if (this.IsOver)
-            {
-                return false;
-            }
-
-            this.PlacePlayerNumber(player, position);
-            return this.CheckWinner();
         }
 
         private void PlacePlayerNumber(int player, int position)
@@ -37,6 +28,17 @@
             {
                 field[position] = player;
             }
+        }
+
+        public override bool Play(int player, int position)
+        {
+            if (this.IsOver)
+            {
+                return false;
+            }
+
+            this.PlacePlayerNumber(player, position);
+            return this.CheckWinner();
         }
 
         protected override bool CheckWinner()
@@ -60,9 +62,19 @@
             return false;
         }
 
+        public override int Number()
+        {
+            return 0;
+        }
         public override string GetName()
         {
             return "Tic Tac Toe";
+        }
+
+        public override object GetMovementData(int position, int move, bool forFirstPlayer = true)
+        {
+            var type = move == 0 ? "mark--x" : "mark--o";
+            return new { position = $"ttt-tile-{position}", type };
         }
     }
 }
