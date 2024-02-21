@@ -1,0 +1,74 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+    <link href="~/css/login.css" rel="stylesheet" />
+    <link href="~/lib/toastr/dist/css/toastr.min.css" rel="stylesheet" />
+</head>
+
+<body translate="no">
+    <form class="form">
+        <div class="control">
+            <h1>
+                Sign In
+            </h1>
+        </div>
+        <div class="control block-cube block-input">
+            <input name="username" placeholder="Username" type="text" id="name">
+            <div class="bg-top">
+                <div class="bg-inner"></div>
+            </div>
+            <div class="bg-right">
+                <div class="bg-inner"></div>
+            </div>
+            <div class="bg">
+                <div class="bg-inner"></div>
+            </div>
+        </div>
+        <button class="btn block-cube block-cube-hover">
+            <div class="bg-top">
+                <div class="bg-inner"></div>
+            </div>
+            <div class="bg-right">
+                <div class="bg-inner"></div>
+            </div>
+            <div class="bg">
+                <div class="bg-inner"></div>
+            </div>
+            <div class="text">
+                Log In
+            </div>
+        </button>
+    </form>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/js/signalr.js"></script>
+    <script src="~/js/site.js"></script>
+    <script>
+        if(getCookie('name') !== undefined){
+            window.location.href = '/home/games';
+        }
+
+        function isEmptyOrSpaces(str) {
+            return str === null || str.match(/^ *$/) !== null;
+        }
+
+        $('form').submit(function (e) {
+            e.preventDefault();
+            var name = $("#name").val();
+            if (isEmptyOrSpaces(name)) {
+                alert('enter name');
+                return;
+            }
+            document.cookie = "name=" + name + "; max-age=1200";
+            window.location.href = '/home/games';
+        });
+    </script>
+</body>
+</html>

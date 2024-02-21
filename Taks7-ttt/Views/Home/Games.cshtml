@@ -1,0 +1,210 @@
+﻿@{
+    ViewData["Title"] = "Games";
+}
+
+@section css{
+    <link href="~/css/css.css" rel="stylesheet" />
+    <link href="~/css/letter.css" rel="stylesheet" />
+    <link href="~/css/ttt.css" rel="stylesheet" />
+}
+
+<div class="row" id="choice">
+    <div class="storages">
+        <div class="storage game-choice" data-group="1">
+            <div class="storage__img">
+                <img src="/img/1.png" alt="Tic tac toe">
+            </div>
+            <div class="storage__text">
+                Tic tac toe
+            </div>
+        </div>
+        <div class="storage game-choice" data-group="2">
+            <div class="storage__img">
+                <img src="/img/2.png" alt="Sea battle">
+            </div>
+            <div class="storage__text ">
+                Sea battle
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="games">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <a href="#" class="card border-0 shadow bg-secondary" onclick="addRoom(); return false;">
+            <div class="card-body text-center pe-auto">
+                <h5 class="card-title mb-0 text-light ">Add room</h5>
+                <div class="card-text text-light">+</div>
+            </div>
+        </a>
+    </div>
+    @* <div class="col-xl-3 col-md-6 mb-4">
+    <a href="2" class="card border-0 shadow">
+    <div class="card-body text-center">
+    <h5 class="card-title mb-0 text-dark">Sea Battle</h5>
+    <div class="card-text text-black-50">Jhon</div>
+    </div>
+    <input type="hidden" id="1" />
+    </a>
+    </div> *@
+</div>
+
+<div id="ttt" class="game" style="clear:both">
+    <fieldset>
+        <span id="game-status">Game on</span>
+
+        <div id="divGameBoard" style="width: 315px">
+            <span class="marker notAvailable mark--o" id="0" data-type="0">1</span>
+            <span class="marker mark--x" id="1"></span>
+            <span class="marker" id="2"></span>
+            <span class="marker" id="3"></span>
+            <span class="marker" id="4"></span>
+            <span class="marker" id="5"></span>
+            <span class="marker" id="6"></span>
+            <span class="marker" id="7"></span>
+            <span class="marker" id="8"></span>
+        </div>
+    </fieldset>
+</div>
+
+<div id="waiting" style="clear:both">
+    <div class="d-flex align-items-center">
+        <strong>Waiting for opponent...</strong>
+        <div class="spinner-border ms-auto text-info" style="width: 3rem; height: 3rem;" role="status" aria-hidden="true"></div>
+    </div>
+</div>
+
+<div class="letter-image" id="info">
+    <div class="animated-mail">
+        <div class="back-fold"></div>
+        <div class="letter">
+            <div class="letter-border"></div>
+            <div class="letter-title"></div>
+            <div class="letter-context"></div>
+            <div class="letter-message text-dark" id="message">You win</div>
+            <div class="letter-stamp">
+                <div class="letter-stamp-inner"></div>
+            </div>
+        </div>
+        <div class="top-fold"></div>
+        <div class="body"></div>
+        <div class="left-fold"></div>
+    </div>
+    <div class="shadow"></div>
+</div>
+
+@section Scripts{
+    <script>
+        let habUrl = '/game';
+        var hubConnection = new signalR.HubConnectionBuilder().withUrl(habUrl).build();
+
+        async function start() {
+            try {
+                await hubConnection.start();
+                console.log("signalr connected.");
+                hubConnection.invoke('GetGames');
+            } catch (err) {
+                console.log(err);
+                settimeout(start, 5000);
+            }
+        };
+
+        hubConnection.onclose(async () => {
+            await start();
+        });
+
+        start();
+
+        hubConnection.on('opponentFound', (data, image) => {
+            games.hide();
+            choice.hide();
+            waiting.hide();
+            game.show();
+            $("#divGameBoard").empty();
+            for (var i = 0; i < 9; i++) {
+                $("#divGameBoard").append("<span class='marker' id=" + i + ">" + i + "</span>");
+            }
+        });
+
+        hubConnection.on('getGamesList', data => {
+            showGames(data);
+        });
+
+        hubConnection.on('waitingForOpponent', data => {
+            games.hide();
+            choice.hide();
+            game.hide();
+            waiting.show();
+        });
+
+        hubConnection.on('changeGameStatus', data => {
+            $('#game-status').html(data);
+        });
+
+        hubConnection.on('info', data => {
+            message.html(data);
+            info.fadeIn("slow");
+        });
+
+        hubConnection.on('moveMade', data => {
+            $("#" + data.position).addClass("notAvailable");
+            $("#" + data.position).addClass(data.type);
+        });
+    </script>
+
+    <script>
+        var games = $("#games");
+        var game = $("#ttt");
+        var waiting = $("#waiting");
+        var choice = $("#choice");
+        var info = $("#info");
+        var message = $("#message");
+        info.on('click',function(){
+            $(this).fadeOut();
+        })
+
+        game.hide();
+        info.hide();
+        choice.hide();
+        waiting.hide();
+        games.show();
+
+        function showGames(data) {
+            games.children().not(':first').remove();
+            for (const raw of data) {
+                games.append('<div class="col-xl-3 col-md-6 mb-4"><a href="#" data-id=' + raw.id + ' class="card border-0 shadow join-game" ><div class="card-body text-center"><h5 class="card-title mb-0 text-dark" >' + raw.author + '</h5><div class="card-text text-black-50" >' + raw.name + '</div></div></a></div>');
+            }
+        }
+
+        function addRoom() {
+            games.hide();
+            choice.show();
+        }
+
+        $('.game-choice').on('click', function () {
+            var name = getCookie('name');
+            if (!name) name = 'no name';
+
+            var type = $(this).data('group');
+            hubConnection.invoke('AddGame', name, type);
+        })
+
+        $(document).on('click', '.marker', function () {
+            if ($(this).hasClass("notAvailable")) {
+                return;
+            }
+
+            console.log('MakeAMove')
+            console.log(typeof $(this)[0].id)
+            hubConnection.invoke("MakeAMove", $(this)[0].id);
+        });
+
+        $(document).on('click', '.join-game', function () {
+            var id = $(this).data('id');
+            var name = getCookie('name');
+            if (!name) name = 'no name';
+
+            hubConnection.invoke('JoinGame', id, name);
+        });
+    </script>
+}
