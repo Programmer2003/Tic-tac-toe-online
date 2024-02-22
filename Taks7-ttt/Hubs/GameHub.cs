@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using Microsoft.CodeAnalysis;
 using System.Collections.Concurrent;
-using System.ComponentModel;
-using System.Numerics;
 using Taks7_ttt.Models;
 using Task7;
 
@@ -42,6 +40,11 @@ namespace Taks7_ttt.Hubs
         public Task OnOpponentDisconnected(string connectionId, string playerName)
         {
             return Clients.Client(connectionId).SendAsync(Constants.Info, "Opponent disconnected");
+        }
+
+        public void UpdateUserCount()
+        {
+            Clients.All.SendAsync(Constants.UpdateUsersCount, players_count - 1);
         }
 
         public void MakeAMove(int position)
@@ -108,15 +111,14 @@ namespace Taks7_ttt.Hubs
             }
 
         }
-
+        
         public void GetGames()
         {
             var list = games.Where(g => g.Player1 != null && !g.IsOver)
                             .Select(g => new { g.Id, author = g.FirstPlayerName(), name = g.GetName() });
             Clients.Client(Context.ConnectionId).SendAsync(Constants.GetGames, list);
         }
-
-
+        
         public void AddGame(string name, int type)
         {
             if (games.FirstOrDefault(g => g.Player1.ConnectionId == Context.ConnectionId || g.Player1.ConnectionId == Context.ConnectionId) != null) return;
@@ -138,16 +140,9 @@ namespace Taks7_ttt.Hubs
             game.Player1 = new Player(Context.ConnectionId, name);
             games.Add(game);
             UpdateGames();
-            Clients.Client(Context.ConnectionId).SendAsync(Constants.WaitingForOpponent);
+            Clients.Client(Context.ConnectionId).SendAsync(Constants.WaitingForOpponent, game.GetName());
         }
-
-        private void UpdateGames()
-        {
-            var list = games.Where(g => g.Player1 != null && !g.IsOver)
-                            .Select(g => new { g.Id, author = g.FirstPlayerName(), name = g.GetName() });
-            Clients.All.SendAsync(Constants.GetGames, list);
-        }
-
+        
         public void JoinGame(int id, string name)
         {
             var game = games.FirstOrDefault(g => g.Id == id);
@@ -160,7 +155,7 @@ namespace Taks7_ttt.Hubs
             if (game.Player1 == null) //No players in game
             {
                 game.Player1 = new Player(Context.ConnectionId, name);
-                Clients.Client(Context.ConnectionId).SendAsync(Constants.WaitingForOpponent);
+                Clients.Client(Context.ConnectionId).SendAsync(Constants.WaitingForOpponent, game.GetName());
             }
             else //One player is waiting
             {
@@ -168,10 +163,10 @@ namespace Taks7_ttt.Hubs
                 game.Player1.Opponent = game.Player2;
                 game.Player2.Opponent = game.Player1;
 
-                Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(true));
-                Clients.Client(Context.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(false));
+                Clients.Client(game.Player1.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(true), game.GetName());
+                Clients.Client(Context.ConnectionId).SendAsync(Constants.OpponentFound, game.Number(), game.OnStartData(false), game.GetName());
 
-                if (toss.Next(0, 1) == 0)
+                if (toss.Next(0, 2) == 0)
                 {
                     game.Player1.WaitingForMove = false;
                     game.Player2.WaitingForMove = true;
@@ -189,16 +184,19 @@ namespace Taks7_ttt.Hubs
                 }
             }
         }
-
+        
         private void Remove(Game game)
         {
             games = new ConcurrentBag<Game>(games.Except(new[] { game }));
             UpdateGames();
         }
-
-        public void UpdateUserCount()
+        
+        private void UpdateGames()
         {
-            Clients.All.SendAsync(Constants.UpdateUsersCount, players_count - 1);
+            var list = games.Where(g => g.Player1 != null && !g.IsOver)
+                            .Select(g => new { g.Id, author = g.FirstPlayerName(), name = g.GetName() });
+            Clients.All.SendAsync(Constants.GetGames, list);
         }
+
     }
 }

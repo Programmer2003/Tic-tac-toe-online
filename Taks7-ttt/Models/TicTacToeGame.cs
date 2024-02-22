@@ -62,14 +62,8 @@ namespace Taks7_ttt.Models
             return false;
         }
 
-        public override int Number()
-        {
-            return 0;
-        }
-        public override string GetName()
-        {
-            return "Tic Tac Toe";
-        }
+        public override int Number() => 0;
+        public override string GetName() =>"Tic Tac Toe";
 
         public override object GetMovementData(int position, int move, bool forFirstPlayer = true)
         {

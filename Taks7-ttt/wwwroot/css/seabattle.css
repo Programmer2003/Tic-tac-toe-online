@@ -1,4 +1,14 @@
-﻿.block {
+﻿#divGameFields {
+    display: flex;
+}
+
+@media screen and (max-width: 800px) {
+    #divGameFields {
+        flex-direction: column;
+    }
+}
+
+.block {
     padding: 20px;
 }
 

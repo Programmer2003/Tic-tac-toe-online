@@ -63,21 +63,16 @@ namespace Taks7_ttt.Models
 
         protected override bool CheckWinner()
         {
-            if(FirstBoard != null) { 
-                if(!FirstBoard.HaveShips())
-                {
-                    this.IsOver = true;
-                    return true;
-                }
+            if (FirstBoard != null && !FirstBoard.HaveShips())
+            {
+                this.IsOver = true;
+                return true;
             }
 
-            if (SecondBoard!= null)
+            if (SecondBoard != null && !SecondBoard.HaveShips())
             {
-                if (!SecondBoard.HaveShips())
-                {
-                    this.IsOver = true;
-                    return true;
-                }
+                this.IsOver = true;
+                return true;
             }
 
             return false;
@@ -86,36 +81,29 @@ namespace Taks7_ttt.Models
         public override object? OnStartData(bool forFirstPlayer)
         {
             if (forFirstPlayer) return new { field1 = FirstBoard?.GetJsonField(), field2 = SecondBoard?.GetJsonField() };
+
             return new { field1 = SecondBoard?.GetJsonField(), field2 = FirstBoard?.GetJsonField() };
         }
-        public override int Number()
-        {
-            return 1;
-        }
+        public override int Number() => 1;
 
-        public override string GetName()
-        {
-            return "Battle Ship";
-        }
+        public override string GetName() => "Battle Ship";
 
         public override object GetMovementData(int position, int move, bool forFirstPlayer = true)
         {
             string type;
-            if(move == 0)
+            if (move == 0)
             {
-                if (SecondBoard == null) type = "missed";
-                else type = SecondBoard.IsShip(position) ? "ship broken" : "missed";
+                if (SecondBoard != null && SecondBoard.IsShip(position)) type = "ship broken";
+                else type = "missed";
             }
             else
             {
-                if (FirstBoard == null) type = "missed";
-                else type = FirstBoard.IsShip(position) ? "ship broken" : "missed";
+                if (FirstBoard != null && FirstBoard.IsShip(position)) type = "ship broken";
+                else type = "missed";
             }
 
             var id = forFirstPlayer ? $"sea-cell-{position}" : $"sea-my-cell-{position}";
-            var div = forFirstPlayer ? $"comp-hint" : $"user-hint";
-            var count = forFirstPlayer ? SecondBoard?.ShipCount() : FirstBoard?.ShipCount();
-            return new { position = id, type, div, count};
+            return new { position = id, type };
         }
     }
 }
